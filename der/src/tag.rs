@@ -260,9 +260,28 @@ impl fmt::Display for Tag {
             Tag::UtcTime => f.write_str("UTCTime"),
             Tag::GeneralizedTime => f.write_str("GeneralizedTime"),
             Tag::Sequence => f.write_str("SEQUENCE"),
-            Tag::Application(n) => write!(f, "APPLICATION {}", n),
-            Tag::ContextSpecific(n) => write!(f, "CONTEXT-SPECIFIC {}", n),
-            Tag::Private(n) => write!(f, "PRIVATE {}", n),
+            Tag::Application {
+                constructed,
+                number,
+            } => write!(
+                f,
+                "APPLICATION {} CONSTRUCTED {}",
+                number, *constructed as u8
+            ),
+            Tag::ContextSpecific {
+                constructed,
+                number,
+            } => {
+                write!(
+                    f,
+                    "CONTEXT-SPECIFIC {} CONSTRUCTED {}",
+                    number, *constructed as u8
+                )
+            }
+            Tag::Private {
+                constructed,
+                number,
+            } => write!(f, "PRIVATE {} CONSTRUCTED {}", number, *constructed as u8),
         }
     }
 }

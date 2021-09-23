@@ -1,8 +1,7 @@
 //! Context-specific field.
 
 use crate::{
-    asn1::Any, ByteSlice, Choice, Decodable, Encodable, Encoder, Error, Header, Length, Result,
-    Tag, TagNumber,
+    asn1::Any, ByteSlice, Choice, Encodable, Encoder, Error, Length, Result, Tag, TagNumber,
 };
 use core::convert::TryFrom;
 
@@ -25,7 +24,7 @@ pub struct ContextSpecific<'a> {
     pub constructed: bool,
 
     /// Value of the field.
-    pub value: ByteSlice<'a>,
+    pub(crate) value: ByteSlice<'a>,
 }
 
 impl<'a> ContextSpecific<'a> {

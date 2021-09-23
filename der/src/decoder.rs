@@ -142,20 +142,37 @@ impl<'a> Decoder<'a> {
         loop {
             match self.peek().map(Tag::try_from).transpose()? {
                 Some(Tag::ContextSpecific {
-                    number: actual_tag, ..
+                    constructed,
+                    number: actual_tag,
                 }) => {
-                    match actual_tag.cmp(&tag) {
-                        Ordering::Less => {
-                            // Decode and ignore lower-numbered fields if
-                            // they parse correctly.
-                            self.decode::<ContextSpecific<'_>>()?;
+                    if constructed {
+                        match actual_tag.cmp(&tag) {
+                            Ordering::Less => {
+                                // Decode and ignore lower-numbered fields if
+                                // they parse correctly.
+                                self.decode::<ContextSpecific<'_>>()?;
+                            }
+                            Ordering::Equal => {
+                                return self
+                                    .decode::<ContextSpecific<'_>>()
+                                    .and_then(|cs| Ok(Some(cs.value.as_bytes().try_into()?)))
+                            }
+                            Ordering::Greater => return Ok(None),
                         }
-                        Ordering::Equal => {
-                            return self
-                                .decode::<ContextSpecific<'_>>()
-                                .map(|cs| Some(cs.value))
+                    } else {
+                        match actual_tag.cmp(&tag) {
+                            Ordering::Less => {
+                                // Decode and ignore lower-numbered fields if
+                                // they parse correctly.
+                                self.decode::<ContextSpecific<'_>>()?;
+                            }
+                            Ordering::Equal => {
+                                return self
+                                    .decode::<ContextSpecific<'_>>()
+                                    .map(|cs| Some(cs.into()))
+                            }
+                            Ordering::Greater => return Ok(None),
                         }
-                        Ordering::Greater => return Ok(None),
                     }
                 }
                 _ => return Ok(None),
