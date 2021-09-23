@@ -27,7 +27,7 @@ pub struct Any<'a> {
     length: Length,
 
     /// Inner value encoded as bytes.
-    value: ByteSlice<'a>,
+    pub(crate) value: ByteSlice<'a>,
 }
 
 impl<'a> Any<'a> {

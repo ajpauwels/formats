@@ -1,7 +1,8 @@
 //! Context-specific field.
 
 use crate::{
-    asn1::Any, Choice, Decodable, Encodable, Encoder, Error, Header, Length, Result, Tag, TagNumber,
+    asn1::Any, ByteSlice, Choice, Decodable, Encodable, Encoder, Error, Header, Length, Result,
+    Tag, TagNumber,
 };
 use core::convert::TryFrom;
 
@@ -20,25 +21,36 @@ pub struct ContextSpecific<'a> {
     /// identifier bit and `0b100000` constructed flag.
     pub tag_number: TagNumber,
 
+    /// Is the inner value constructed? (i.e. was the constructed bit set?)
+    pub constructed: bool,
+
     /// Value of the field.
-    pub value: Any<'a>,
+    pub value: ByteSlice<'a>,
+}
+
+impl<'a> ContextSpecific<'a> {
+    /// Get the tag used to encode this [`ContextSpecific`] field.
+    pub fn tag(self) -> Tag {
+        Tag::ContextSpecific {
+            constructed: self.constructed,
+            number: self.tag_number,
+        }
+    }
 }
 
 impl<'a> Choice<'a> for ContextSpecific<'a> {
     fn can_decode(tag: Tag) -> bool {
-        matches!(tag, Tag::ContextSpecific(_))
+        matches!(tag, Tag::ContextSpecific { .. })
     }
 }
 
 impl<'a> Encodable for ContextSpecific<'a> {
     fn encoded_len(&self) -> Result<Length> {
-        self.value.encoded_len()?.for_tlv()
+        Any::from(*self).encoded_len()
     }
 
     fn encode(&self, encoder: &mut Encoder<'_>) -> Result<()> {
-        let tag = Tag::ContextSpecific(self.tag_number);
-        Header::new(tag, self.value.encoded_len()?)?.encode(encoder)?;
-        self.value.encode(encoder)
+        Any::from(*self).encode(encoder)
     }
 }
 
@@ -48,14 +60,24 @@ impl<'a> From<&ContextSpecific<'a>> for ContextSpecific<'a> {
     }
 }
 
+impl<'a> From<ContextSpecific<'a>> for Any<'a> {
+    fn from(context_specific: ContextSpecific<'a>) -> Any<'a> {
+        Any::from_tag_and_value(context_specific.tag(), context_specific.value)
+    }
+}
+
 impl<'a> TryFrom<Any<'a>> for ContextSpecific<'a> {
     type Error = Error;
 
     fn try_from(any: Any<'a>) -> Result<ContextSpecific<'a>> {
         match any.tag() {
-            Tag::ContextSpecific(tag_number) => Ok(Self {
-                tag_number,
-                value: Any::from_der(any.as_bytes())?,
+            Tag::ContextSpecific {
+                constructed,
+                number,
+            } => Ok(Self {
+                tag_number: number,
+                constructed,
+                value: any.value,
             }),
             tag => Err(tag.unexpected_error(None)),
         }
