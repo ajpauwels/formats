@@ -3,7 +3,7 @@
 use crate::{
     asn1::Any, ByteSlice, Choice, Encodable, Encoder, Error, Length, Result, Tag, TagNumber,
 };
-use core::convert::TryFrom;
+use core::convert::{TryFrom, TryInto};
 
 /// Context-specific field.
 ///
@@ -28,6 +28,19 @@ pub struct ContextSpecific<'a> {
 }
 
 impl<'a> ContextSpecific<'a> {
+    /// Create a new [`ContextSpecific`] field
+    pub fn new(
+        tag_number: TagNumber,
+        constructed: bool,
+        value: &'a [u8],
+    ) -> Result<ContextSpecific<'a>> {
+        Ok(ContextSpecific {
+            tag_number,
+            constructed,
+            value: value.try_into()?,
+        })
+    }
+
     /// Get the tag used to encode this [`ContextSpecific`] field.
     pub fn tag(self) -> Tag {
         Tag::ContextSpecific {
